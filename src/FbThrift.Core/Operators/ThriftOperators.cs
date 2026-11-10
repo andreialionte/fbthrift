@@ -59,6 +59,21 @@ public static class ThriftOperators
         // Cross-type numeric equality
         if (IsNumeric(typeof(TLeft)) && IsNumeric(typeof(TRight)))
         {
+            // Handle NaN and infinity cases before decimal conversion
+            if (typeof(TLeft) == typeof(double) || typeof(TRight) == typeof(double))
+            {
+                var dl = (double)(object)left;
+                var dr = (double)(object)right;
+                if (double.IsNaN(dl) && double.IsNaN(dr)) return true;
+                if (double.IsInfinity(dl) || double.IsInfinity(dr)) return dl == dr;
+            }
+            if (typeof(TLeft) == typeof(float) || typeof(TRight) == typeof(float))
+            {
+                var fl = (float)(object)left;
+                var fr = (float)(object)right;
+                if (float.IsNaN(fl) && float.IsNaN(fr)) return true;
+                if (float.IsInfinity(fl) || float.IsInfinity(fr)) return fl == fr;
+            }
             return Convert.ToDecimal(left) == Convert.ToDecimal(right);
         }
 
@@ -107,6 +122,10 @@ public static class ThriftOperators
         {
             return Hash(System.Text.Encoding.UTF8.GetBytes((string)(object)value));
         }
+        if (typeof(T) == typeof(byte[]))
+        {
+            return Hash((byte[])(object)value);
+        }
         // For other value types, use reflection to get size
         var size = System.Runtime.InteropServices.Marshal.SizeOf(value);
         var bytes = new byte[size];
@@ -115,6 +134,8 @@ public static class ThriftOperators
     }
 
     private static ulong Hash(ReadOnlySpan<byte> bytes) => XxHash3.HashToUInt64(bytes);
+
+    private static ulong Hash(byte[] bytes) => XxHash3.HashToUInt64(bytes);
 
     private static bool IsNumeric(Type type)
     {

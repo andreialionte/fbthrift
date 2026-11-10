@@ -209,7 +209,7 @@ public abstract class TransformBase : ITransform
             using var output = RecyclableStreamManager.GetStream();
             using (var zlib = new ZLibStream(input, CompressionMode.Decompress, leaveOpen: true))
             {
-                input.CopyTo(zlib);
+                zlib.CopyTo(output);
             }
             return output.ToArray();
         }
@@ -298,17 +298,19 @@ public sealed class Lz4Transform : TransformBase
         return output;
     }
 
-    public override byte[] Decompress(ReadOnlySpan<byte> data)
-    {
-        // LZ4 decompression needs the original size, which we don't have
-        // Use a reasonable max size heuristic
-        var maxOutputSize = data.Length * 4; // Conservative estimate
-        var output = new byte[maxOutputSize];
-        var outputSpan = new Span<byte>(output);
-        var size = LZ4Codec.Decode(data, outputSpan);
-        Array.Resize(ref output, size);
-        return output;
-    }
+public override byte[] Decompress(ReadOnlySpan<byte> data)
+        {
+            // LZ4 decompression needs the original size, which we don't have
+            // Use a reasonable max size heuristic
+            var maxOutputSize = data.Length * 4; // Conservative estimate
+            var output = new byte[maxOutputSize];
+            var outputSpan = new Span<byte>(output);
+            var size = LZ4Codec.Decode(data, outputSpan);
+            if (size < 0)
+                throw new InvalidOperationException("LZ4 decompression failed");
+            Array.Resize(ref output, size);
+            return output;
+        }
 
     public override ITransformStream CreateStream(bool compress)
         => new Lz4StreamTransform(compress);
@@ -323,15 +325,17 @@ public sealed class Lz4Transform : TransformBase
         return output;
     }
 
-    public static byte[] DecompressStatic(ReadOnlySpan<byte> data)
-    {
-        var maxOutputSize = data.Length * 4;
-        var output = new byte[maxOutputSize];
-        var outputSpan = new Span<byte>(output);
-        var size = LZ4Codec.Decode(data, outputSpan);
-        Array.Resize(ref output, size);
-        return output;
-    }
+public static byte[] DecompressStatic(ReadOnlySpan<byte> data)
+        {
+            var maxOutputSize = data.Length * 4;
+            var output = new byte[maxOutputSize];
+            var outputSpan = new Span<byte>(output);
+            var size = LZ4Codec.Decode(data, outputSpan);
+            if (size < 0)
+                throw new InvalidOperationException("LZ4 decompression failed");
+            Array.Resize(ref output, size);
+            return output;
+        }
 }
 
 /// <summary>

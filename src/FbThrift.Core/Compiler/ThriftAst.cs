@@ -256,14 +256,14 @@ public enum ThriftTypeKind
 }
 
 /// <summary>
-/// Base Thrift type (primitives).
-/// </summary>
-public sealed class ThriftBaseType : ThriftType
-{
-    public ThriftBaseType(ThriftTypeKind kind) : base(ThriftTypeKind.Base, kind.ToString().ToLowerInvariant())
+    /// Base Thrift type (primitives).
+    /// </summary>
+    public sealed class ThriftBaseType : ThriftType
     {
+        public ThriftBaseType(ThriftTypeKind kind) : base(kind, kind.ToString().ToLowerInvariant())
+        {
+        }
     }
-}
 
 /// <summary>
 /// Container Thrift type (list, set, map).
