@@ -15,7 +15,7 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using FbThrift.Core.Abstractions;
-using FbThrift.Core.FBThrift;
+using FBThrift;
 using FbThrift.Core.Server;
 
 /// <summary>
