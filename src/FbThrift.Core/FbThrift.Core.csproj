@@ -1,0 +1,48 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591;NU1510;NU1603</NoWarn>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <PackageId>FbThrift.Core</PackageId>
+    <Title>FbThrift Core</Title>
+    <Description>Core abstractions, interfaces, and base types for FbThrift</Description>
+    <Authors>FbThrift Contributors</Authors>
+    <PackageTags>fbthrift;thrift;rpc;core;abstractions</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/meta/fbthrift</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/meta/fbthrift</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="9.0.0" />
+    <PackageReference Include="Microsoft.IO.RecyclableMemoryStream" Version="4.0.1" />
+    <PackageReference Include="System.Memory.Data" Version="9.0.0" />
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
+    <PackageReference Include="System.Threading.Channels" Version="10.0.14" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis" Version="5.9.0" />
+    <PackageReference Include="System.Collections.Immutable" Version="8.0.0" />
+    <!-- Zstandard compression -->
+    <PackageReference Include="ZstdSharp.Port" Version="0.8.8" />
+    <!-- Snappy compression - Snappier (better maintained, faster) -->
+    <PackageReference Include="Snappier" Version="1.3.1" />
+    <!-- LZ4 compression -->
+    <PackageReference Include="K4os.Compression.LZ4" Version="1.3.8" />
+    <!-- XXH3/XXH128 checksums - built into .NET 8+ via System.IO.Hashing -->
+    <PackageReference Include="System.IO.Hashing" Version="10.0.14" />
+    <PackageReference Update="Microsoft.CodeAnalysis.NetAnalyzers" Version="10.0.403" />
+  </ItemGroup>
+
+</Project>

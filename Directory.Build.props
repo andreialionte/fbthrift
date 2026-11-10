@@ -1,0 +1,77 @@
+<Project>
+  <!--
+    FbThrift.Build - Centralized versioning and common properties
+    Imported by all FbThrift projects via Directory.Build.props
+  -->
+
+  <PropertyGroup>
+    <!-- Centralized version - single source of truth -->
+    <FbThriftVersion>1.0.0</FbThriftVersion>
+    <VersionPrefix>$(FbThriftVersion)</VersionPrefix>
+    <VersionSuffix></VersionSuffix>
+    <Version>$(VersionPrefix)$(VersionSuffix)</Version>
+
+    <!-- Common assembly attributes -->
+    <Authors>FbThrift Contributors</Authors>
+    <Company>Meta Platforms, Inc.</Company>
+    <Copyright>Copyright (c) Meta Platforms, Inc. and affiliates.</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/meta/fbthrift</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/meta/fbthrift</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <DebugType>embedded</DebugType>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+
+    <!-- Common assembly attributes -->
+    <!-- <AssemblyOriginatorKeyFile>$(MSBuildThisFileDirectory)..\..\..\key.snk</AssemblyOriginatorKeyFile> -->
+    <SignAssembly>false</SignAssembly>
+
+    <!-- Common package metadata -->
+    <PackageTags>fbthrift;thrift;rpc;serialization;rpc;protobuf;grpc</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>icon.png</PackageIcon>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+    <Optimize>false</Optimize>
+    <DebugType>full</DebugType>
+    <DefineConstants>$(DefineConstants);DEBUG;TRACE</DefineConstants>
+  </PropertyGroup>
+
+  <!-- Common analyzers -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="9.0.0" PrivateAssets="all" />
+    <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.556" PrivateAssets="all" />
+    <PackageReference Include="SonarAnalyzer.CSharp" Version="9.32.0.97167" PrivateAssets="all" />
+  </ItemGroup>
+
+  <!-- Common package references -->
+  <ItemGroup Condition="'$(TargetFramework)' != 'netstandard2.0'">
+    <PackageReference Include="System.Text.Json" Version="9.0.0" />
+  </ItemGroup>
+
+  <!-- Enable nullable reference types -->
+  <PropertyGroup>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <!-- Treat warnings as errors in Release -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsAsErrors />
+    <NoWarn>$(NoWarn);CS1591;CS1573</NoWarn>
+  </PropertyGroup>
+
+</Project>

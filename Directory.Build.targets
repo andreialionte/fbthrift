@@ -1,0 +1,66 @@
+<Project>
+  <!--
+    FbThrift.Build - Common build targets and tasks
+    Imported by all FbThrift projects via Directory.Build.targets
+  -->
+
+  <!-- SourceLink integration -->
+  <PropertyGroup>
+    <EnableSourceControlManagerQueries>true</EnableSourceControlManagerQueries>
+  </PropertyGroup>
+
+  <!-- Generate package on build for packable projects -->
+  <PropertyGroup Condition="'$(IsPackable)' == 'true'">
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+  </PropertyGroup>
+
+  <!-- SourceLink -->
+  <PropertyGroup>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
+  </PropertyGroup>
+
+  <!-- Deterministic builds -->
+  <PropertyGroup>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+  <!-- SourceLink targets -->
+  <Import Project="$(MSBuildThisFileDirectory)GitVersion.targets" Condition="Exists('$(MSBuildThisFileDirectory)GitVersion.targets')" />
+
+  <!-- Generate version from git tags -->
+  <Target Name="GenerateVersion" BeforeTargets="BeforeBuild" Condition="'$(VersionPrefix)' == ''">
+    <Exec Command="git describe --tags --always --dirty=-dirty" WorkingDirectory="$(MSBuildProjectDirectory)">
+      <Output TaskParameter="ExitCode" PropertyName="GitDescribeExitCode" />
+      <Output TaskParameter="ConsoleOutput" PropertyName="GitDescribeOutput" />
+    </Exec>
+    <PropertyGroup>
+      <VersionPrefix Condition="'$(GitDescribeExitCode)' == '0'">$(GitDescribeOutput.TrimStart('v'))</VersionPrefix>
+      <VersionPrefix Condition="'$(VersionPrefix)' == ''">1.0.0</VersionPrefix>
+    </PropertyGroup>
+  </Target>
+
+  <!-- Generate assembly info -->
+  <Target Name="GenerateAssemblyVersionInfo" BeforeTargets="CoreCompile">
+    <PropertyGroup>
+      <AssemblyVersion>$(VersionPrefix)</AssemblyVersion>
+      <FileVersion>$(VersionPrefix)</FileVersion>
+      <InformationalVersion>$(Version)</InformationalVersion>
+    </PropertyGroup>
+  </Target>
+
+  <!-- Generate SBOM (Software Bill of Materials) -->
+  <Target Name="GenerateSbom" AfterTargets="Pack" Condition="'$(IsPackable)' == 'true'">
+    <Exec Command="dotnet sbom -p $(MSBuildProjectFile) -o $(PackageOutputPath)\sbom.json" Condition="Exists('$(PackageOutputPath)')" />
+  </Target>
+
+  <!-- Signing -->
+  <Target Name="SignAssembly" AfterTargets="CoreCompile" Condition="'$(SignAssembly)' == 'true' And '$(AssemblyOriginatorKeyFile)' != ''">
+    <Exec Command="sn -R $(TargetPath) $(AssemblyOriginatorKeyFile)" />
+  </Target>
+
+</Project>

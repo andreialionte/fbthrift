@@ -1,0 +1,46 @@
+# Build artifacts
+bin/
+obj/
+out/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# NuGet
+packages/
+*.nupkg
+*.snupkg
+
+# Rider/IDE
+.idea/
+*.sln.iml
+*.csproj.user
+*.csproj.user.osscache
+
+# Test results
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temporary
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Debug symbols
+*.pdb
+
+# Generated files
+*.generated.cs
+Generated/

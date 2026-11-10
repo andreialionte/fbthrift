@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="TransportConnecting" xml:space="preserve">
+    <value>Connecting to {0} via {1}</value>
+  </data>
+  <data name="TransportConnected" xml:space="preserve">
+    <value>Successfully connected to {0} via {1}</value>
+  </data>
+  <data name="TransportDisconnected" xml:space="preserve">
+    <value>Disconnected from {0}</value>
+  </data>
+  <data name="TransportConnectionFailed" xml:space="preserve">
+    <value>Failed to connect to {0}: {1}</value>
+  </data>
+  <data name="TransportReadTimeout" xml:space="preserve">
+    <value>Read timeout after {0}ms on {1}</value>
+  </data>
+  <data name="TransportWriteTimeout" xml:space="preserve">
+    <value>Write timeout after {0}ms on {1}</value>
+  </data>
+  <data name="TransportMaxFrameSizeExceeded" xml:space="preserve">
+    <value>Frame size {0} exceeds maximum allowed size {1}</value>
+  </data>
+  <data name="ProtocolEncoding" xml:space="preserve">
+    <value>Encoding {0} using {1} protocol</value>
+  </data>
+  <data name="ProtocolDecoding" xml:space="preserve">
+    <value>Decoding {0} using {1} protocol</value>
+  </data>
+  <data name="ProtocolUnsupportedVersion" xml:space="preserve">
+    <value>Unsupported protocol version: {0}</value>
+  </data>
+  <data name="ProtocolInvalidFrame" xml:space="preserve">
+    <value>Invalid frame received: {0}</value>
+  </data>
+  <data name="RpcCallStarted" xml:space="preserve">
+    <value>RPC call started: {0}.{1}</value>
+  </data>
+  <data name="RpcCallCompleted" xml:space="preserve">
+    <value>RPC call completed: {0}.{1} in {2}ms</value>
+  </data>
+  <data name="RpcCallFailed" xml:space="preserve">
+    <value>RPC call failed: {0}.{1} - {2}</value>
+  </data>
+  <data name="RpcTimeout" xml:space="preserve">
+    <value>RPC call timed out after {0}ms: {1}.{2}</value>
+  </data>
+  <data name="RpcCancelled" xml:space="preserve">
+    <value>RPC call cancelled: {0}.{1}</value>
+  </data>
+  <data name="RpcMethodNotFound" xml:space="preserve">
+    <value>Method not found: {0}.{1}</value>
+  </data>
+  <data name="SerializationStarted" xml:space="preserve">
+    <value>Serializing {0} using {1}</value>
+  </data>
+  <data name="SerializationCompleted" xml:space="preserve">
+    <value>Serialized {0} in {1}ms ({2} bytes)</value>
+  </data>
+  <data name="SerializationFailed" xml:space="preserve">
+    <value>Serialization failed for {0}: {1}</value>
+  </data>
+  <data name="DeserializationFailed" xml:space="preserve">
+    <value>Deserialization failed for {0}: {1}</value>
+  </data>
+  <data name="ServerStarting" xml:space="preserve">
+    <value>Server starting on {0}</value>
+  </data>
+  <data name="ServerStarted" xml:space="preserve">
+    <value>Server started on {0}</value>
+  </data>
+  <data name="ServerStopping" xml:space="preserve">
+    <value>Server stopping on {0}</value>
+  </data>
+  <data name="ServerStopped" xml:space="preserve">
+    <value>Server stopped on {0}</value>
+  </data>
+  <data name="ServerRequestReceived" xml:space="preserve">
+    <value>Received request: {0}.{1} from {2}</value>
+  </data>
+  <data name="ServerRequestCompleted" xml:space="preserve">
+    <value>Completed request: {0}.{1} in {2}ms</value>
+  </data>
+  <data name="ServerRequestFailed" xml:space="preserve">
+    <value>Request failed: {0}.{1} - {2}</value>
+  </data>
+</root>

@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591;NU1510;NU1603</NoWarn>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <PackageId>FbThrift.LoadBalancing</PackageId>
+    <Title>FbThrift Load Balancing</Title>
+    <Description>Shared load balancing abstractions and implementations for FbThrift client/server.</Description>
+    <Authors>FbThrift Contributors</Authors>
+    <PackageTags>fbthrift;thrift;loadbalancing;rpc</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/meta/fbthrift</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/meta/fbthrift</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <SignAssembly>false</SignAssembly>
+  </PropertyGroup>
+
+</Project>

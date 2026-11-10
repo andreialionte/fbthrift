@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="TransportNotConnected" xml:space="preserve">
+    <value>Transport is not connected</value>
+  </data>
+  <data name="TransportAlreadyConnected" xml:space="preserve">
+    <value>Transport is already connected</value>
+  </data>
+  <data name="TransportConnectionRefused" xml:space="preserve">
+    <value>Connection refused to {0}:{1}</value>
+  </data>
+  <data name="TransportCertificateValidationFailed" xml:space="preserve">
+    <value>Certificate validation failed: {0}</value>
+  </data>
+  <data name="TransportTlsHandshakeFailed" xml:space="preserve">
+    <value>TLS handshake failed: {0}</value>
+  </data>
+  <data name="ProtocolUnsupportedProtocol" xml:space="preserve">
+    <value>Unsupported protocol: {0}</value>
+  </data>
+  <data name="ProtocolInvalidMagicNumber" xml:space="preserve">
+    <value>Invalid magic number in protocol header</value>
+  </data>
+  <data name="ProtocolFrameTooLarge" xml:space="preserve">
+    <value>Frame size {0} exceeds maximum {1}</value>
+  </data>
+  <data name="ProtocolChecksumMismatch" xml:space="preserve">
+    <value>Checksum mismatch: expected {0}, got {1}</value>
+  </data>
+  <data name="ProtocolInvalidFieldType" xml:space="preserve">
+    <value>Invalid field type {0} for field {1}</value>
+  </data>
+  <data name="RpcServiceUnavailable" xml:space="preserve">
+    <value>Service {0} is unavailable</value>
+  </data>
+  <data name="RpcMethodNotImplemented" xml:space="preserve">
+    <value>Method {0}.{1} is not implemented</value>
+  </data>
+  <data name="RpcInvalidArguments" xml:space="preserve">
+    <value>Invalid arguments for method {0}.{1}</value>
+  </data>
+  <data name="RpcInternalError" xml:space="preserve">
+    <value>Internal server error: {0}</value>
+  </data>
+  <data name="RpcDeadlineExceeded" xml:space="preserve">
+    <value>Deadline exceeded for {0}.{1} after {2}ms</value>
+  </data>
+  <data name="SerializationTypeMismatch" xml:space="preserve">
+    <value>Type mismatch: expected {0}, got {1}</value>
+  </data>
+  <data name="SerializationMissingRequiredField" xml:space="preserve">
+    <value>Required field {0} is missing</value>
+  </data>
+  <data name="SerializationUnknownField" xml:space="preserve">
+    <value>Unknown field {0} in struct {1}</value>
+  </data>
+  <data name="SerializationBufferOverflow" xml:space="preserve">
+    <value>Buffer overflow during serialization</value>
+  </data>
+  <data name="ConfigInvalidEndpoint" xml:space="preserve">
+    <value>Invalid endpoint: {0}</value>
+  </data>
+  <data name="ConfigMissingCertificate" xml:space="preserve">
+    <value>Certificate is required for TLS but not provided</value>
+  </data>
+  <data name="ConfigInvalidTimeout" xml:space="preserve">
+    <value>Invalid timeout value: {0}</value>
+  </data>
+</root>
