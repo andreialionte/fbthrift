@@ -232,7 +232,7 @@ public interface IThriftServer : IAsyncDisposable
 /// <summary>
 /// Options for configuring a Thrift server.
 /// </summary>
-public sealed class ServerOptions
+public class ServerOptions
 {
     /// <summary>
     /// The endpoint to listen on.

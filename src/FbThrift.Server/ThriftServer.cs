@@ -15,13 +15,14 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using FbThrift.Core.Abstractions;
+using FbThrift.Core.Protocol;
 using FBThrift;
 using FbThrift.Core.Server;
 
 /// <summary>
 /// Options for configuring a Thrift server.
 /// </summary>
-public sealed class ThriftServerOptions
+public sealed class ServerThriftServerOptions : ServerOptions
 {
     /// <summary>
     /// Gets or sets the endpoint to listen on.
@@ -67,7 +68,7 @@ public sealed class ThriftServerOptions
 /// <summary>
 /// Registry for service handlers. Maps service names to their Thrift processors.
 /// </summary>
-public sealed class ServiceRegistry : IAsyncDisposable
+public sealed class ServerServiceRegistry : IAsyncDisposable
 {
     private readonly ConcurrentDictionary<string, ThriftProcessorBase> _services = new(StringComparer.Ordinal);
     private bool _disposed;
@@ -129,12 +130,12 @@ public sealed class ServiceRegistry : IAsyncDisposable
 /// Uses System.Threading.Channels for connection management, System.IO.Pipelines
 /// for efficient I/O, and System.Runtime.CompilerServices.Unsafe for high-performance memory operations.
 /// </summary>
-public sealed class ThriftServer : IThriftServer
+public sealed class ServerThriftServer : IThriftServer
 {
     private readonly IServerTransport _transport;
     private readonly IProtocolFactory _protocolFactory;
-    private readonly ServiceRegistry _serviceRegistry;
-    private readonly ThriftServerOptions _options;
+    private readonly ServerServiceRegistry _serviceRegistry;
+    private readonly ServerThriftServerOptions _options;
     private readonly CancellationTokenSource _cts = new();
     private readonly Task _acceptLoop;
     private readonly Channel<ConnectionContext> _connectionChannel;
@@ -142,16 +143,16 @@ public sealed class ThriftServer : IThriftServer
     private long _connectionCounter;
     private bool _disposed;
 
-    public ThriftServer(
+    public ServerThriftServer(
         IServerTransport transport,
         IProtocolFactory protocolFactory,
-        ServiceRegistry serviceRegistry,
-        ThriftServerOptions? options = null)
+        ServerServiceRegistry serviceRegistry,
+        ServerThriftServerOptions? options = null)
     {
         _transport = transport ?? throw new ArgumentNullException(nameof(transport));
         _protocolFactory = protocolFactory ?? throw new ArgumentNullException(nameof(protocolFactory));
         _serviceRegistry = serviceRegistry ?? throw new ArgumentNullException(nameof(serviceRegistry));
-        _options = options ?? new ThriftServerOptions();
+        _options = options ?? new ServerThriftServerOptions();
 
         _connectionChannel = Channel.CreateBounded<ConnectionContext>(
             new BoundedChannelOptions(_options.MaxConnections)
@@ -238,10 +239,13 @@ public sealed class ThriftServer : IThriftServer
                 }
 
                 var connectionId = Interlocked.Increment(ref _connectionCounter);
+                var reader = _protocolFactory.Create(ProtocolId.Compact);
+                var writer = _protocolFactory.Create(ProtocolId.Compact);
                 var connection = new ConnectionContext(
                     connectionId,
                     clientTransport,
-                    _protocolFactory.Create(ProtocolId.Binary),
+                    reader,
+                    writer,
                     _cts.Token);
 
                 _connections[connectionId] = connection;
@@ -277,7 +281,8 @@ public sealed class ThriftServer : IThriftServer
         {
             while (!_cts.Token.IsCancellationRequested && connection.Transport.IsOpen)
             {
-                var protocol = _protocolFactory.Create(ProtocolId.Binary);
+                var reader = _protocolFactory.Create(ProtocolId.Compact);
+                var writer = _protocolFactory.Create(ProtocolId.Compact);
 
                 try
                 {
@@ -289,7 +294,7 @@ public sealed class ThriftServer : IThriftServer
 
                     var context = new ProcessContext
                     {
-                        ConnectionContext = new TConnectionContext { ConnectionId = connection.Id },
+                        ConnectionContext = new ServerTConnectionContext { ConnectionId = connection.Id },
                         Metadata = new Dictionary<string, object>()
                     };
 
@@ -303,8 +308,8 @@ public sealed class ThriftServer : IThriftServer
                         : null;
 
                     bool continueProcessing = await processor.ProcessAsync(
-                        protocol,
-                        protocol,
+                        reader,
+                        writer,
                         context,
                         _cts.Token).ConfigureAwait(false);
 
@@ -323,7 +328,8 @@ public sealed class ThriftServer : IThriftServer
                 }
                 finally
                 {
-                    protocol.Dispose();
+                    reader.Dispose();
+                    writer.Dispose();
                 }
             }
         }
@@ -339,19 +345,22 @@ public sealed class ThriftServer : IThriftServer
         public ConnectionContext(
             long id,
             IClientTransport transport,
-            IProtocol protocol,
+            ITProtocolReader reader,
+            ITProtocolWriter writer,
             CancellationToken cancellationToken)
         {
             Id = id;
             Transport = transport;
-            Protocol = protocol;
+            Reader = reader;
+            Writer = writer;
             CancellationToken = cancellationToken;
             Tcs = new TaskCompletionSource<object?>(TaskCreationOptions.RunContinuationsAsynchronously);
         }
 
         public long Id { get; }
         public IClientTransport Transport { get; }
-        public IProtocol Protocol { get; }
+        public ITProtocolReader Reader { get; }
+        public ITProtocolWriter Writer { get; }
         public CancellationToken CancellationToken { get; }
         public TaskCompletionSource<object?> Tcs { get; }
     }
@@ -387,17 +396,59 @@ public sealed class ThriftServer : IThriftServer
         await _transport.CloseAsync(CancellationToken.None).ConfigureAwait(false);
         _cts.Dispose();
     }
+    
+    private sealed class ProcessContext
+    {
+        public ServerTConnectionContext ConnectionContext { get; set; } = new();
+        public Dictionary<string, object> Metadata { get; set; } = new();
+    }
+
+    private sealed class ServerTConnectionContext
+    {
+        public long ConnectionId { get; init; }
+        public Dictionary<string, object> Properties { get; init; } = new();
+    }
+
+    private sealed record ServerTraceContext(string TraceId, string SpanId, string? ParentSpanId);
+
+    private ServerTraceContext? ExtractTraceContext(ProcessContext context)
+    {
+        if (context.Metadata.TryGetValue("traceparent", out var traceparentObj) &&
+            traceparentObj is string traceparent &&
+            TryParseTraceparent(traceparent, out var traceId, out var spanId, out var parentSpanId))
+        {
+            return new ServerTraceContext(traceId, spanId, parentSpanId);
+        }
+        return null;
+    }
+
+    private static bool TryParseTraceparent(string traceparent, out string traceId, out string spanId, out string? parentSpanId)
+    {
+        traceId = string.Empty;
+        spanId = string.Empty;
+        parentSpanId = null;
+
+        var parts = traceparent.Split('-');
+        if (parts.Length >= 3 && parts[0] == "00")
+        {
+            traceId = parts[1];
+            spanId = parts[2];
+            parentSpanId = parts[2];
+            return true;
+        }
+        return false;
+    }
 }
 
 /// <summary>
-/// Fluent builder for creating <see cref="ThriftServer"/> instances.
+/// Fluent builder for creating <see cref="ServerThriftServer"/> instances.
 /// </summary>
-public sealed class ThriftServerBuilder : IThriftServerBuilder
+public sealed class ServerThriftServerBuilder : IThriftServerBuilder
 {
     private IServerTransport? _transport;
     private IProtocolFactory? _protocolFactory;
-    private readonly ServiceRegistry _serviceRegistry = new(null!);
-    private readonly ThriftServerOptions _options = new();
+    private readonly ServerServiceRegistry _serviceRegistry = new();
+    private readonly ServerThriftServerOptions _options = new();
     private Uri? _endpoint;
 
     public IThriftServerBuilder WithTransport(IServerTransport transport)
@@ -441,11 +492,11 @@ public sealed class ThriftServerBuilder : IThriftServerBuilder
         if (_protocolFactory == null)
             throw new InvalidOperationException("Protocol factory must be configured.");
 
-        var serviceRegistry = new ServiceRegistry(_protocolFactory);
-        return new ThriftServer(_transport, _protocolFactory, serviceRegistry, _options);
+        var serviceRegistry = new ServerServiceRegistry();
+        return new ServerThriftServer(_transport, _protocolFactory, serviceRegistry, _options);
     }
 
-    public ServiceRegistry ServiceRegistry => _serviceRegistry;
+    public ServerServiceRegistry ServiceRegistry => _serviceRegistry;
 }
 
 /// <summary>
@@ -458,20 +509,20 @@ public sealed class TConnectionContext
 }
 
 /// <summary>
-/// Factory for creating <see cref="ThriftServer"/> instances with dependency injection support.
+/// Factory for creating <see cref="ServerThriftServer"/> instances with dependency injection support.
 /// </summary>
-public sealed class ThriftServerFactory : IAsyncDisposable
+public sealed class ServerThriftServerFactory : IAsyncDisposable
 {
-    private readonly List<ThriftServer> _servers = new();
+    private readonly List<ServerThriftServer> _servers = new();
     private readonly object _lock = new();
 
-    public ThriftServer CreateServer(
+    public ServerThriftServer CreateServer(
         IServerTransport transport,
         IProtocolFactory protocolFactory,
-        ServiceRegistry serviceRegistry,
-        ThriftServerOptions? options = null)
+        ServerServiceRegistry serviceRegistry,
+        ServerThriftServerOptions? options = null)
     {
-        var server = new ThriftServer(transport, protocolFactory, serviceRegistry, options);
+        var server = new ServerThriftServer(transport, protocolFactory, serviceRegistry, options);
 
         lock (_lock)
         {
@@ -492,34 +543,4 @@ public sealed class ThriftServerFactory : IAsyncDisposable
             _servers.Clear();
         }
     }
-
-    private TraceContext? ExtractTraceContext(ProcessContext context)
-    {
-        if (context.Metadata.TryGetValue("traceparent", out var traceparentObj) &&
-            traceparentObj is string traceparent &&
-            TryParseTraceparent(traceparent, out var traceId, out var spanId, out var parentSpanId))
-        {
-            return new TraceContext(traceId, spanId, parentSpanId);
-        }
-        return null;
-    }
-
-    private static bool TryParseTraceparent(string traceparent, out string traceId, out string spanId, out string? parentSpanId)
-    {
-        traceId = string.Empty;
-        spanId = string.Empty;
-        parentSpanId = null;
-
-        var parts = traceparent.Split('-');
-        if (parts.Length >= 3 && parts[0] == "00")
-        {
-            traceId = parts[1];
-            spanId = parts[2];
-            parentSpanId = parts[2];
-            return true;
-        }
-        return false;
-    }
-
-    private sealed record TraceContext(string TraceId, string SpanId, string? ParentSpanId);
 }
