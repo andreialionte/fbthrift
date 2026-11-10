@@ -83,45 +83,61 @@ public sealed class THeaderWriter : IDisposable
 
     public void WriteHeader()
     {
-        // Write THeader frame
-        // Format: seqId(4) + headerSize(2) + protocolId(2) + numTransforms(2) + transforms... + headers...
-        var headerStream = new MemoryStream();
-        var writer = new BinaryWriter(headerStream);
+        // Write THeader frame (big-endian wire format)
+        // Format: seqId(4) + headerSize(2, in 4-byte words) + protocolId(2) + numTransforms(2) + transforms... + numHeaders(2) + headers... + clientType(4)
+        var buffer = new byte[4096];
+        int pos = 0;
 
-        writer.Write(_metadata.SeqId);
+        // seqId (4 bytes, big-endian)
+        BinaryPrimitives.WriteUInt32BigEndian(buffer.AsSpan(pos, 4), _metadata.SeqId);
+        pos += 4;
 
-        // Reserve space for header size
-        var headerSizePos = headerStream.Position;
-        writer.Write((ushort)0);
+        // Reserve space for header size (2 bytes, in 4-byte words)
+        var headerSizePos = pos;
+        pos += 2;
 
-        writer.Write(_metadata.ProtocolId);
-        writer.Write((ushort)_metadata.Transforms.Count);
+        // protocolId (2 bytes, big-endian)
+        BinaryPrimitives.WriteUInt16BigEndian(buffer.AsSpan(pos, 2), _metadata.ProtocolId);
+        pos += 2;
+
+        // numTransforms (2 bytes, big-endian)
+        BinaryPrimitives.WriteUInt16BigEndian(buffer.AsSpan(pos, 2), (ushort)_metadata.Transforms.Count);
+        pos += 2;
 
         foreach (var transform in _metadata.Transforms)
         {
-            writer.Write(transform);
+            BinaryPrimitives.WriteUInt16BigEndian(buffer.AsSpan(pos, 2), transform);
+            pos += 2;
         }
 
         // Write headers
-        writer.Write((ushort)_metadata.Headers.Count);
+        BinaryPrimitives.WriteUInt16BigEndian(buffer.AsSpan(pos, 2), (ushort)_metadata.Headers.Count);
+        pos += 2;
         foreach (var kvp in _metadata.Headers)
         {
             var keyBytes = Encoding.UTF8.GetBytes(kvp.Key);
             var valBytes = Encoding.UTF8.GetBytes(kvp.Value);
-            writer.Write((ushort)keyBytes.Length);
-            writer.Write(keyBytes);
-            writer.Write((ushort)valBytes.Length);
-            writer.Write(valBytes);
+            BinaryPrimitives.WriteUInt16BigEndian(buffer.AsSpan(pos, 2), (ushort)keyBytes.Length);
+            pos += 2;
+            keyBytes.CopyTo(buffer.AsSpan(pos));
+            pos += keyBytes.Length;
+            BinaryPrimitives.WriteUInt16BigEndian(buffer.AsSpan(pos, 2), (ushort)valBytes.Length);
+            pos += 2;
+            valBytes.CopyTo(buffer.AsSpan(pos));
+            pos += valBytes.Length;
         }
 
-        // Update header size
-        var headerSize = (ushort)(headerStream.Length - 6); // Exclude seqId(4) + headerSize(2)
-        headerStream.Position = headerSizePos;
-        writer.Write(headerSize);
+        // Write client type (4 bytes, big-endian) - ThriftHeader = 0x00000005
+        BinaryPrimitives.WriteUInt32BigEndian(buffer.AsSpan(pos, 4), 0x00000005);
+        pos += 4;
+
+        // Update header size (in 4-byte words, excluding seqId(4) + headerSize(2) = 6 bytes)
+        var headerSizeBytes = pos - 6;
+        var headerSizeWords = (ushort)((headerSizeBytes + 3) / 4); // Round up to 4-byte boundary
+        BinaryPrimitives.WriteUInt16BigEndian(buffer.AsSpan(headerSizePos, 2), headerSizeWords);
 
         // Write to output stream
-        var headerBytes = headerStream.ToArray();
-        _stream.Write(headerBytes, 0, headerBytes.Length);
+        _stream.Write(buffer, 0, pos);
     }
 
     public void WritePayload(ReadOnlySpan<byte> payload)
@@ -175,8 +191,9 @@ public sealed class THeaderReader
             if (!TryReadUInt32(out var seqId)) return false;
             Metadata.SeqId = seqId;
 
-            // Read header size (2 bytes)
-            if (!TryReadUInt16(out var headerSize)) return false;
+            // Read header size (2 bytes, in 4-byte words)
+            if (!TryReadUInt16(out var headerSizeWords)) return false;
+            var headerSize = headerSizeWords * 4;
 
             if (_buffer.Length < 8 + headerSize) return false;
 
@@ -208,6 +225,9 @@ public sealed class THeaderReader
 
                 Metadata.Headers[key] = val;
             }
+
+            // Read client type (4 bytes) - optional, at end of header
+            // (We skip it for now as it's at the end of header)
 
             return true;
         }
