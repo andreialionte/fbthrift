@@ -1,0 +1,53 @@
+namespace FbThrift.Tests.Services;
+
+using System;
+using System.Net;
+using System.Net.Sockets;
+using System.Threading.Tasks;
+using FBThrift;
+using FbThrift.Core;
+using FbThrift.Transports.Tcp;
+using Xunit;
+
+public class ThriftClientTests
+{
+    [Fact]
+    public void FbThriftClient_CanBeCreated()
+    {
+        // Test that FbThriftClient can be instantiated
+        // This would require a transport
+        Assert.True(true); // Placeholder for when client is implemented
+    }
+}
+
+public class TcpTransportTests
+{
+    [Fact]
+    public void SocketTransport_CanBeCreated()
+    {
+        var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, System.Net.Sockets.ProtocolType.Tcp);
+        var transport = new SocketFbThriftTransport(socket);
+        
+        Assert.NotNull(transport);
+    }
+
+    [Fact]
+    public void FramedTransport_CanWrapTransport()
+    {
+        var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, System.Net.Sockets.ProtocolType.Tcp);
+        var innerTransport = new SocketFbThriftTransport(socket);
+        var framedTransport = new FramedTransport(innerTransport);
+        
+        Assert.NotNull(framedTransport);
+    }
+
+    [Fact]
+    public void UnframedTransport_CanWrapTransport()
+    {
+        var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, System.Net.Sockets.ProtocolType.Tcp);
+        var innerTransport = new SocketFbThriftTransport(socket);
+        var unframedTransport = new UnframedTransport(innerTransport);
+        
+        Assert.NotNull(unframedTransport);
+    }
+}

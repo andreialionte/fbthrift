@@ -104,14 +104,6 @@ public sealed class UnframedTransport : IDisposable
         return _stream.Read(buffer);
     }
     
-    public async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
-    {
-        if (_disposed)
-            throw new ObjectDisposedException(nameof(UnframedTransport));
-        
-        return await _stream.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
-    }
-    
     public int Read(Span<byte> buffer, int offset, int count)
     {
         if (_disposed)
@@ -134,41 +126,5 @@ public sealed class UnframedTransport : IDisposable
             throw new ObjectDisposedException(nameof(UnframedTransport));
         
         return await _stream.ReadAsync(buffer, offset, count, cancellationToken).ConfigureAwait(false);
-    }
-    
-    public int Read(Span<byte> buffer, int offset, int count)
-    {
-        if (_disposed)
-            throw new ObjectDisposedException(nameof(UnframedTransport));
-        
-        return _stream.Read(buffer[offset..(offset + count)]);
-    }
-    
-    public async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
-    {
-        if (_disposed)
-            throw new ObjectDisposedException(nameof(UnframedTransport));
-        
-        return await _stream.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
-    }
-    
-    public async ValueTask<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken = default)
-    {
-        if (_disposed)
-            throw new ObjectDisposedException(nameof(UnframedTransport));
-        
-        return await _stream.ReadAsync(buffer, offset, count, cancellationToken).ConfigureAwait(false);
-    }
-    
-    public void Dispose()
-    {
-        if (!_disposed)
-        {
-            if (!_leaveOpen)
-            {
-                _stream.Dispose();
-            }
-            _disposed = true;
-        }
     }
 }

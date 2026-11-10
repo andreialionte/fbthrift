@@ -3,8 +3,7 @@ namespace FbThrift.Tests;
 using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
-using FbThrift.Core;
-using FbThrift.Core.Transport;
+using FbThrift.Transports.Tcp;
 
 public class TransportTests
 {
