@@ -262,4 +262,9 @@ public class ThriftCompactWriter : IThriftProtocolWriter
     {
         // Compact protocol doesn't need explicit struct end marker
     }
+
+    public void Dispose()
+    {
+        _stream?.Dispose();
+    }
 }

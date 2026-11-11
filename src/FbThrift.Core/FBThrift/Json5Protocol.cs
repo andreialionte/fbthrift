@@ -173,4 +173,9 @@ public sealed class Json5ProtocolWriter : IThriftProtocolWriter
     public void WriteFieldEnd() { }
     public void WriteStructBegin(string name) { }
     public void WriteStructEnd() { }
-}
+
+        public void Dispose()
+        {
+            // No unmanaged resources to dispose
+        }
+    }

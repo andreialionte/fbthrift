@@ -4,6 +4,7 @@
 using System.Buffers;
 using System.Buffers.Binary;
 using System.IO.Pipelines;
+using System.Net;
 using System.Net.Sockets;
 using System.Threading.Channels;
 
@@ -13,7 +14,7 @@ namespace FbThrift.Transports.Tcp;
 /// A Thrift transport over a TCP socket using <see cref="System.IO.Pipelines"/> for zero-allocation
 /// frame reading and <see cref="Channel{T}"/> for request/response multiplexing with backpressure.
 /// </summary>
-public sealed class SocketFbThriftTransport : IFbThriftTransport, IAsyncDisposable
+public sealed class SocketFbThriftTransport : IFbThriftTransport, FbThrift.Core.Abstractions.IClientTransport, IAsyncDisposable
 {
     private const int HeaderSize = 8;
     
@@ -26,6 +27,9 @@ public sealed class SocketFbThriftTransport : IFbThriftTransport, IAsyncDisposab
     private short _nextSeqId;
     private bool _disposed;
     private volatile Exception? _readLoopFault;
+
+    /// <inheritdoc/>
+    public EndPoint? RemoteEndPoint => _socket.RemoteEndPoint;
 
     /// <summary>
     /// Represents a pending request with its response channel.
@@ -59,6 +63,16 @@ public sealed class SocketFbThriftTransport : IFbThriftTransport, IAsyncDisposab
         
         _readLoop = Task.Run(ReadLoopAsync);
     }
+
+    /// <inheritdoc/>
+    public ValueTask ConnectAsync(CancellationToken cancellationToken = default)
+    {
+        // Socket is already connected when transport is created
+        return ValueTask.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public EndPoint? RemoteEndPoint => _socket.RemoteEndPoint;
 
     /// <inheritdoc/>
     public async ValueTask<ReadOnlyMemory<byte>> SendRequestAsync(ReadOnlyMemory<byte> body, CancellationToken cancellationToken = default)

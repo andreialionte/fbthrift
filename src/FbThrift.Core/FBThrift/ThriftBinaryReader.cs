@@ -203,4 +203,9 @@ public class ThriftBinaryReader : IThriftProtocolReader
             total += read;
         }
     }
+
+    public void Dispose()
+    {
+        _stream?.Dispose();
+    }
 }

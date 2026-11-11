@@ -8,6 +8,7 @@ using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -54,23 +55,28 @@ public interface ITransport : IAsyncDisposable
 }
 
 /// <summary>
-/// Base interface for client transports that can initiate connections.
-/// </summary>
-public interface IClientTransport : ITransport
-{
-    /// <summary>
-    /// Connects to the specified endpoint.
+    /// Base interface for client transports that can initiate connections.
     /// </summary>
-    ValueTask ConnectAsync(CancellationToken cancellationToken = default);
+    public interface IClientTransport : ITransport
+    {
+        /// <summary>
+        /// Connects to the specified endpoint.
+        /// </summary>
+        ValueTask ConnectAsync(CancellationToken cancellationToken = default);
 
-    /// <summary>
-    /// Sends a request and receives a response.
-    /// </summary>
-    /// <param name="request">The request data to send.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The response data.</returns>
-    ValueTask<ReadOnlyMemory<byte>> SendRequestAsync(ReadOnlyMemory<byte> request, CancellationToken cancellationToken = default);
-}
+        /// <summary>
+        /// Sends a request and receives a response.
+        /// </summary>
+        /// <param name="request">The request data to send.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>The response data.</returns>
+        ValueTask<ReadOnlyMemory<byte>> SendRequestAsync(ReadOnlyMemory<byte> request, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Gets the remote endpoint of the connection.
+        /// </summary>
+        EndPoint? RemoteEndPoint { get; }
+    }
 
 /// <summary>
 /// Base interface for server transports that accept connections.

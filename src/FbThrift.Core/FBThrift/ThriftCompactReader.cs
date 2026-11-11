@@ -244,14 +244,19 @@ public class ThriftCompactReader : IThriftProtocolReader
         }
     }
 
-    private void ReadExactly(byte[] buf)
-    {
-        int total = 0;
-        while (total < buf.Length)
+private void ReadExactly(byte[] buf)
         {
-            int read = _stream.Read(buf, total, buf.Length - total);
-            if (read == 0) throw new EndOfStreamException();
-            total += read;
+            int total = 0;
+            while (total < buf.Length)
+            {
+                int read = _stream.Read(buf, total, buf.Length - total);
+                if (read == 0) throw new EndOfStreamException();
+                total += read;
+            }
+        }
+
+        public void Dispose()
+        {
+            _stream?.Dispose();
         }
     }
-}

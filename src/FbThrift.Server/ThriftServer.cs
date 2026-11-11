@@ -126,31 +126,28 @@ public sealed class ServerServiceRegistry : IAsyncDisposable
 }
 
 /// <summary>
-/// A high-performance Thrift server that implements <see cref="IThriftServer"/>.
-/// Uses System.Threading.Channels for connection management, System.IO.Pipelines
-/// for efficient I/O, and System.Runtime.CompilerServices.Unsafe for high-performance memory operations.
-/// </summary>
-public sealed class ServerThriftServer : IThriftServer
-{
-    private readonly IServerTransport _transport;
-    private readonly IProtocolFactory _protocolFactory;
-    private readonly ServerServiceRegistry _serviceRegistry;
-    private readonly ServerThriftServerOptions _options;
-    private readonly CancellationTokenSource _cts = new();
-    private readonly Task _acceptLoop;
-    private readonly Channel<ConnectionContext> _connectionChannel;
-    private readonly ConcurrentDictionary<long, ConnectionContext> _connections = new();
-    private long _connectionCounter;
-    private bool _disposed;
+    /// A high-performance Thrift server that implements <see cref="IThriftServer"/>.
+    /// Uses System.Threading.Channels for connection management, System.IO.Pipelines
+    /// for efficient I/O, and System.Runtime.CompilerServices.Unsafe for high-performance memory operations.
+    /// </summary>
+    public sealed class ServerThriftServer : IThriftServer
+    {
+        private readonly IServerTransport _transport;
+        private readonly ServerServiceRegistry _serviceRegistry;
+        private readonly ServerThriftServerOptions _options;
+        private readonly CancellationTokenSource _cts = new();
+        private readonly Task _acceptLoop;
+        private readonly Channel<ConnectionContext> _connectionChannel;
+        private readonly ConcurrentDictionary<long, ConnectionContext> _connections = new();
+        private long _connectionCounter;
+        private bool _disposed;
 
     public ServerThriftServer(
         IServerTransport transport,
-        IProtocolFactory protocolFactory,
         ServerServiceRegistry serviceRegistry,
         ServerThriftServerOptions? options = null)
     {
         _transport = transport ?? throw new ArgumentNullException(nameof(transport));
-        _protocolFactory = protocolFactory ?? throw new ArgumentNullException(nameof(protocolFactory));
         _serviceRegistry = serviceRegistry ?? throw new ArgumentNullException(nameof(serviceRegistry));
         _options = options ?? new ServerThriftServerOptions();
 
@@ -239,8 +236,10 @@ public sealed class ServerThriftServer : IThriftServer
                 }
 
                 var connectionId = Interlocked.Increment(ref _connectionCounter);
-                var reader = _protocolFactory.Create(ProtocolId.Compact);
-                var writer = _protocolFactory.Create(ProtocolId.Compact);
+                var fbReader = new FBThrift.ThriftCompactReader(new MemoryStream());
+                var fbWriter = new FBThrift.ThriftCompactWriter(new MemoryStream());
+                var reader = new FBThriftProtocolReaderAdapter(fbReader);
+                var writer = new FBThriftProtocolWriterAdapter(fbWriter);
                 var connection = new ConnectionContext(
                     connectionId,
                     clientTransport,
@@ -281,8 +280,8 @@ public sealed class ServerThriftServer : IThriftServer
         {
             while (!_cts.Token.IsCancellationRequested && connection.Transport.IsOpen)
             {
-                var reader = _protocolFactory.Create(ProtocolId.Compact);
-                var writer = _protocolFactory.Create(ProtocolId.Compact);
+                var reader = connection.Reader;
+                var writer = connection.Writer;
 
                 try
                 {
@@ -292,18 +291,20 @@ public sealed class ServerThriftServer : IThriftServer
                         break;
                     }
 
-                    var context = new ProcessContext
+                    var context = new FbThrift.Core.Server.ProcessContext
                     {
-                        ConnectionContext = new ServerTConnectionContext { ConnectionId = connection.Id },
-                        Metadata = new Dictionary<string, object>()
+                        ConnectionContext = new FbThrift.Core.Server.TConnectionContext
+                        {
+                            PeerAddress = connection.Transport.RemoteEndPoint?.ToString(),
+                            ConnectedAt = DateTime.UtcNow
+                        }
                     };
+                    context.ConnectionContext.SetProperty("connectionId", connection.Id);
 
                     var traceContext = ExtractTraceContext(context);
                     using var activity = traceContext != null
                         ? new Activity("thrift.request")
-                            .SetTraceId(ActivityTraceId.CreateFromString(traceContext.TraceId))
-                            .SetSpanId(ActivitySpanId.CreateFromString(traceContext.SpanId))
-                            .SetParentId(traceContext.ParentSpanId)
+                            .SetParentId(ActivityTraceId.CreateFromString(traceContext.TraceId), ActivitySpanId.CreateFromString(traceContext.SpanId))
                             .Start()
                         : null;
 
@@ -396,28 +397,28 @@ public sealed class ServerThriftServer : IThriftServer
         await _transport.CloseAsync(CancellationToken.None).ConfigureAwait(false);
         _cts.Dispose();
     }
-    
-    private sealed class ProcessContext
+
+    private sealed class TraceContext
     {
-        public ServerTConnectionContext ConnectionContext { get; set; } = new();
-        public Dictionary<string, object> Metadata { get; set; } = new();
+        public string TraceId { get; }
+        public string SpanId { get; }
+        public string? ParentSpanId { get; }
+
+        public TraceContext(string traceId, string spanId, string? parentSpanId)
+        {
+            TraceId = traceId;
+            SpanId = spanId;
+            ParentSpanId = parentSpanId;
+        }
     }
 
-    private sealed class ServerTConnectionContext
-    {
-        public long ConnectionId { get; init; }
-        public Dictionary<string, object> Properties { get; init; } = new();
-    }
-
-    private sealed record ServerTraceContext(string TraceId, string SpanId, string? ParentSpanId);
-
-    private ServerTraceContext? ExtractTraceContext(ProcessContext context)
+    private TraceContext? ExtractTraceContext(FbThrift.Core.Server.ProcessContext context)
     {
         if (context.Metadata.TryGetValue("traceparent", out var traceparentObj) &&
             traceparentObj is string traceparent &&
             TryParseTraceparent(traceparent, out var traceId, out var spanId, out var parentSpanId))
         {
-            return new ServerTraceContext(traceId, spanId, parentSpanId);
+            return new TraceContext(traceId, spanId, parentSpanId);
         }
         return null;
     }
@@ -441,38 +442,37 @@ public sealed class ServerThriftServer : IThriftServer
 }
 
 /// <summary>
-/// Fluent builder for creating <see cref="ServerThriftServer"/> instances.
-/// </summary>
-public sealed class ServerThriftServerBuilder : IThriftServerBuilder
-{
-    private IServerTransport? _transport;
-    private IProtocolFactory? _protocolFactory;
-    private readonly ServerServiceRegistry _serviceRegistry = new();
-    private readonly ServerThriftServerOptions _options = new();
-    private Uri? _endpoint;
-
-    public IThriftServerBuilder WithTransport(IServerTransport transport)
+    /// Fluent builder for creating <see cref="ServerThriftServer"/> instances.
+    /// </summary>
+    public sealed class ServerThriftServerBuilder : IThriftServerBuilder
     {
-        _transport = transport ?? throw new ArgumentNullException(nameof(transport));
-        return this;
-    }
+        private IServerTransport? _transport;
+        private readonly ServerServiceRegistry _serviceRegistry = new();
+        private readonly ServerThriftServerOptions _options = new();
+        private Uri? _endpoint;
 
-    public IThriftServerBuilder WithTransportFactory(ITransportFactory factory)
-    {
-        throw new NotSupportedException("Transport factory not yet supported in ThriftServerBuilder.");
-    }
+        public IThriftServerBuilder WithTransport(IServerTransport transport)
+        {
+            _transport = transport ?? throw new ArgumentNullException(nameof(transport));
+            return this;
+        }
 
-    public IThriftServerBuilder WithProtocolFactory(IProtocolFactory factory)
-    {
-        _protocolFactory = factory ?? throw new ArgumentNullException(nameof(factory));
-        return this;
-    }
+        public IThriftServerBuilder WithTransportFactory(ITransportFactory factory)
+        {
+            throw new NotSupportedException("Transport factory not yet supported in ThriftServerBuilder.");
+        }
+
+        public IThriftServerBuilder WithProtocolFactory(IProtocolFactory factory)
+        {
+            // Protocols are created internally, this is a no-op
+            return this;
+        }
 
     public IThriftServerBuilder WithOptions(Action<ServerOptions> configure)
-    {
-        configure?.Invoke(_options);
-        return this;
-    }
+        {
+            configure?.Invoke(_options);
+            return this;
+        }
 
     public IThriftServerBuilder WithEndpoint(Uri endpoint)
     {
@@ -485,16 +485,14 @@ public sealed class ServerThriftServerBuilder : IThriftServerBuilder
         throw new NotSupportedException("Use ServiceRegistry.RegisterService() instead.");
     }
 
-    public IThriftServer Build()
-    {
-        if (_transport == null)
-            throw new InvalidOperationException("Transport must be configured.");
-        if (_protocolFactory == null)
-            throw new InvalidOperationException("Protocol factory must be configured.");
+public IThriftServer Build()
+        {
+            if (_transport == null)
+                throw new InvalidOperationException("Transport must be configured.");
 
-        var serviceRegistry = new ServerServiceRegistry();
-        return new ServerThriftServer(_transport, _protocolFactory, serviceRegistry, _options);
-    }
+            var serviceRegistry = new ServerServiceRegistry();
+            return new ServerThriftServer(_transport, serviceRegistry, _options);
+        }
 
     public ServerServiceRegistry ServiceRegistry => _serviceRegistry;
 }
@@ -518,11 +516,10 @@ public sealed class ServerThriftServerFactory : IAsyncDisposable
 
     public ServerThriftServer CreateServer(
         IServerTransport transport,
-        IProtocolFactory protocolFactory,
         ServerServiceRegistry serviceRegistry,
         ServerThriftServerOptions? options = null)
     {
-        var server = new ServerThriftServer(transport, protocolFactory, serviceRegistry, options);
+        var server = new ServerThriftServer(transport, serviceRegistry, options);
 
         lock (_lock)
         {

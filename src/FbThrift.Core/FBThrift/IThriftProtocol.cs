@@ -3,7 +3,7 @@ using System.IO;
 
 namespace FBThrift;
 
-public interface IThriftProtocolWriter
+public interface IThriftProtocolWriter : IDisposable
 {
     void WriteFieldBegin(ThriftWireType fieldType, short fieldId);
     void WriteFieldStop();
@@ -28,7 +28,7 @@ public interface IThriftProtocolWriter
     void WriteStruct<T>(T value) where T : IThriftSerializable => value.__fbthrift_write(this);
 }
 
-public interface IThriftProtocolReader
+public interface IThriftProtocolReader : IDisposable
 {
     (ThriftWireType fieldType, short fieldId) ReadFieldBegin();
     void ReadFieldEnd();
